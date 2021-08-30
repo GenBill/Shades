@@ -51,6 +51,7 @@ def rota_train(dataloader, optimizer, num_epoch, model_list, device, quick_flag=
         teacher_list[i].eval()
         rota_list[i].train()
     
+    print('Training the Rotavap ...')
     for epoch in range(num_epoch):
         running_loss = 0
         n_samples = 0

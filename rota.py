@@ -62,10 +62,20 @@ def rota_train(dataloader, optimizer, num_epoch, model_list, device, quick_flag=
             labels = labels.to(device)
 
             optimizer.zero_grad()
-            outputs = rota_list[0](teacher_list[0](inputs)).unsqueeze(2)
+            with torch.no_grad():
+                features = []
+                for i in range(model_num):
+                    features.append(teacher_list[i](inputs))
+            
+            outputs = rota_list[0](features[0]).unsqueeze(2)
             for i in range(1, model_num):
-                temp = rota_list[i](teacher_list[i](inputs)).unsqueeze(2)
+                temp = rota_list[i](features[i]).unsqueeze(2)
                 outputs = torch.cat((outputs,temp), dim=2)
+            
+            # outputs = rota_list[0](teacher_list[0](inputs)).unsqueeze(2)
+            # for i in range(1, model_num):
+            #     temp = rota_list[i](teacher_list[i](inputs)).unsqueeze(2)
+            #     outputs = torch.cat((outputs,temp), dim=2)
             
             loss = torch.mean(torch.std(outputs, dim=2))
             loss.backward()

@@ -5,8 +5,8 @@ import torch.optim as optim
 from .rota import rota_train
 
 def feature_dist(fea_0, fea_1):
-    nn.KLDivLoss(reduction='batchmean')(fea_0, fea_1)
-    return 
+    return nn.KLDivLoss(reduction='batchmean')(fea_0, fea_1)
+    
 
 def student_train(args, dataloader, criterion, retcher_list, student, device):
     '''
@@ -24,9 +24,9 @@ def student_train(args, dataloader, criterion, retcher_list, student, device):
     print('Distilling by Rotavap ...')
     for epoch in range(args.num_epoch):
         running_loss = 0
-        running_plain_loss = 0
+        running_loss_plain = 0
         n_samples = 0
-        for batch_num, (inputs, target) in enumerate(dataloader):
+        for batch_num, (inputs, labels) in enumerate(dataloader):
             batchSize = inputs.size(0)
             n_samples += batchSize
             inputs = inputs.to(device)
@@ -37,7 +37,7 @@ def student_train(args, dataloader, criterion, retcher_list, student, device):
             features_stu = student_ft(inputs)
             outputs_stu = student_fc(features_stu)
             loss = criterion(outputs_stu, labels)
-            plain_loss = loss.item()
+            loss_plain = loss.item()
             
             with torch.no_grad():
                 features = []
@@ -51,12 +51,12 @@ def student_train(args, dataloader, criterion, retcher_list, student, device):
             optimizer_stu.step()
             # scheduler.step()
             running_loss += loss.item()
-            running_plain_loss += plain_loss
+            running_loss_plain += loss_plain
 
         epoch_loss = running_loss / n_samples
-        epoch_plain_loss = running_plain_loss / n_samples
+        epoch_loss_plain = running_loss_plain / n_samples
 
-        print('Epoch {}, Loss : {:.8f}\nPlain Loss : {:.8f}'.format(epoch, epoch_loss, epoch_plain_loss))
+        print('Epoch {}, Loss : {:.8f}\nPlain Loss : {:.8f}'.format(epoch, epoch_loss, epoch_loss_plain))
 
     return student
 

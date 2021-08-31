@@ -32,8 +32,17 @@ fea_0 = torch.ones(3,3)
 fea_1 = torch.ones(3,3)
 
 klloss = nn.KLDivLoss(reduction='batchmean')(fea_0, fea_1)
-print(klloss)
+print('batchmean', klloss)
 
 klloss = nn.KLDivLoss(reduction='mean')(fea_0, fea_1)
-print(klloss)
+print('mean', klloss)
 
+klloss = nn.KLDivLoss(reduction='none')(fea_0, fea_1)
+print('none', klloss)
+
+
+b1 = torch.ones(3,1)
+b2 = torch.ones(3,1)*2
+
+b1 *= b2
+print(b1)

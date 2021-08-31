@@ -83,13 +83,12 @@ def student_train(args, dataloader, criterion, teacher_list, student, device):
 
     return student
 
-def evap(args, dataloader, model_list, student, device):
+def evap(args, dataloader, criterion, model_list, student, device):
     '''
     including args
     args : lr, momentum, num_epoch, quick_flag
     '''
     model_num = len(model_list)
 
-    criterion = nn.CrossEntropyLoss()
     student = student_train(args, dataloader, criterion, model_list, student, device)
 

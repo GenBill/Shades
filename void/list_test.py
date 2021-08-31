@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torchvision
 
 def identity_mapping():
     return nn.Sequential()
@@ -42,7 +43,14 @@ print('none', klloss)
 
 
 b1 = torch.ones(3,1)
-b2 = torch.ones(3,1)*2
+b2 = torch.ones(3,1,1)
 
-b1 *= b2
-print(b1)
+b3 = nn.Flatten()(b2)
+print(b2.shape, b3.shape)
+
+
+student = torchvision.models.resnet18(pretrained=False)
+student_ft = nn.Sequential(*(list(student.children())[:-1]))
+student_fc = nn.Sequential(*(list(student.children())[-1:]))
+
+print(student_ft, student_fc)

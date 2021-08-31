@@ -15,7 +15,7 @@ def rota_creater(in_features, device):
     Question : Why not use Rotation Matrix , but Linear ? 
     Answer : Rotation Matrix cannot solve Chirality -> Linear
     '''
-    return nn.Linear(in_features, in_features, bias=True, device=device)
+    return nn.Linear(in_features, in_features, bias=True).to(device)
 
 
 def teacher_list_init(model_list, device):
@@ -25,18 +25,16 @@ def teacher_list_init(model_list, device):
         teacher_list.append(teacher_creater(i,device))
     return teacher_list
 
-def rota_list_init(teacher_list, device, quick_flag=False):
+def rota_list_init(teacher_list, in_features, device, quick_flag=False):
     # init rota_list
     model_num = len(teacher_list)
     rota_list = []
     if quick_flag:
         rota_list.append(identity_mapping(device))
         for i in range(model_num-1):
-            in_features = teacher_list[i][-1].out_features
             rota_list.append(rota_creater(in_features, device))
     else:
         for i in range(model_num):
-            in_features = teacher_list[i][-1].out_features
             rota_list.append(rota_creater(in_features, device))
 
     return rota_list
@@ -48,8 +46,9 @@ def rota_train(args, dataloader, model_list, device, quick_flag=False):
     args : lr, momentum, num_epoch, quick_flag
     '''
     model_num = len(model_list)
+    in_features = model_list[0].fc.in_features
     teacher_list = teacher_list_init(model_list, device)
-    rota_list = rota_list_init(teacher_list, device, quick_flag)
+    rota_list = rota_list_init(teacher_list, in_features, device, quick_flag)
     
     rota_param = nn.Sequential(*rota_list)
     optimizer_rota = optim.SGD(rota_param.parameters(), lr=args.lr, momentum=args.momentum, nesterov=True, weight_decay=1e-4)
@@ -60,10 +59,10 @@ def rota_train(args, dataloader, model_list, device, quick_flag=False):
         rota_list[i].train()
     
     print('Training the Rotavap ...')
-    for epoch in range(args.num_epoch):
+    for epoch in range(args.num_epoch_0):
         running_loss = 0
         n_samples = 0
-        for batch_num, (inputs, target) in enumerate(dataloader):
+        for batch_num, (inputs, labels) in enumerate(dataloader):
             batchSize = inputs.size(0)
             n_samples += batchSize
             inputs = inputs.to(device)
@@ -73,10 +72,12 @@ def rota_train(args, dataloader, model_list, device, quick_flag=False):
             with torch.no_grad():
                 features = []
                 for i in range(model_num):
-                    features.append(teacher_list[i](inputs))
+                    features.append(nn.Flatten()(teacher_list[i](inputs)))
             
             outputs = rota_list[0](features[0]).unsqueeze(2)
             for i in range(1, model_num):
+                # print(rota_list[i])
+                # print(features[i].shape)
                 temp = rota_list[i](features[i]).unsqueeze(2)
                 outputs = torch.cat((outputs,temp), dim=2)
             
@@ -89,7 +90,7 @@ def rota_train(args, dataloader, model_list, device, quick_flag=False):
             loss.backward()
             optimizer_rota.step()
             # scheduler.step()
-            running_loss += loss.item()
+            running_loss += loss.item() * batchSize
 
         epoch_loss = running_loss / n_samples
         print('Epoch {}, Loss : {:.8f}'.format(epoch, epoch_loss))

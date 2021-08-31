@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.optim as optim
 
 def identity_mapping(device):
     return nn.Sequential().to(device)
@@ -10,11 +11,11 @@ def teacher_creater(model_all, device):
 
 def rota_creater(in_features, device):
     '''
-    Linear without bias
-    Question : Why not use Rotation Matrix , but Linear without bias ? 
+    Linear !
+    Question : Why not use Rotation Matrix , but Linear ? 
     Answer : Rotation Matrix cannot solve Chirality -> Linear
     '''
-    return nn.Linear(in_features, in_features, bias=False, device=device)
+    return nn.Linear(in_features, in_features, bias=True, device=device)
 
 
 def teacher_list_init(model_list, device):
@@ -41,10 +42,17 @@ def rota_list_init(teacher_list, device, quick_flag=False):
     return rota_list
 
 
-def rota_train(dataloader, optimizer, num_epoch, model_list, device, quick_flag=False):
+def rota_train(args, dataloader, model_list, device, quick_flag=False):
+    '''
+    including args
+    args : lr, momentum, num_epoch, quick_flag
+    '''
     model_num = len(model_list)
     teacher_list = teacher_list_init(model_list, device)
     rota_list = rota_list_init(teacher_list, device, quick_flag)
+    
+    rota_param = nn.Sequential(*rota_list)
+    optimizer_rota = optim.SGD(rota_param.parameters(), lr=args.lr, momentum=args.momentum, nesterov=True, weight_decay=1e-4)
 
     # init eval() & train()
     for i in range(model_num):
@@ -52,7 +60,7 @@ def rota_train(dataloader, optimizer, num_epoch, model_list, device, quick_flag=
         rota_list[i].train()
     
     print('Training the Rotavap ...')
-    for epoch in range(num_epoch):
+    for epoch in range(args.num_epoch):
         running_loss = 0
         n_samples = 0
         for batch_num, (inputs, target) in enumerate(dataloader):
@@ -61,7 +69,7 @@ def rota_train(dataloader, optimizer, num_epoch, model_list, device, quick_flag=
             inputs = inputs.to(device)
             labels = labels.to(device)
 
-            optimizer.zero_grad()
+            optimizer_rota.zero_grad()
             with torch.no_grad():
                 features = []
                 for i in range(model_num):
@@ -79,12 +87,12 @@ def rota_train(dataloader, optimizer, num_epoch, model_list, device, quick_flag=
             
             loss = torch.mean(torch.std(outputs, dim=2))
             loss.backward()
-            optimizer.step()
+            optimizer_rota.step()
             # scheduler.step()
             running_loss += loss.item()
 
         epoch_loss = running_loss / n_samples
-        print('Epoch {}, Loss :{:.8f}'.format(epoch, epoch_loss))
+        print('Epoch {}, Loss : {:.8f}'.format(epoch, epoch_loss))
 
     return teacher_list, rota_list
 

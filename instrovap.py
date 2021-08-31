@@ -6,6 +6,21 @@ def feature_dist(fea_0, fea_1):
     temp = nn.KLDivLoss(reduction='none')(fea_0, fea_1)
     return torch.mean(temp, dim=1)
 
+def count_loss_weight(loss, weight):
+    model_num = len(loss)
+    Ret = []
+    for i in range(model_num):
+        Ret.append(loss[i] * weight[i])
+
+    sumsum = Ret[0]
+    for i in range(1, model_num):
+        sumsum += Ret[i]
+
+    for i in range(model_num):
+        Ret[i] /= sumsum
+    
+    return Ret
+
 def student_train(args, dataloader, criterion, teacher_list, student, device):
     '''
     including args
@@ -51,8 +66,9 @@ def student_train(args, dataloader, criterion, teacher_list, student, device):
                 loss_1.append(feature_dist(outputs_stu, this_fea))
             
             loss_main = loss_0 * (1-args.alpha)
+            loss_weight = count_loss_weight(loss_1, weight)
             for i in range(model_num):
-                loss_main += torch.mean(loss_1[i] * weight[i]) * args.alpha
+                loss_main += torch.mean(loss_weight[i]) * args.alpha
 
             loss_main.backward()
             optimizer_stu.step()

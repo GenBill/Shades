@@ -1,11 +1,14 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.functional as F
 
 from .rota import rota_train
 
-def feature_dist(fea_0, fea_1):
-    return nn.KLDivLoss(reduction='batchmean')(fea_0, fea_1)
+def feature_dist(fea_0, fea_1, T = 2):
+    fea_0 = F.log_softmax(fea_0/T, dim=1)
+    fea_1 = F.log_softmax(fea_0/T, dim=1)
+    return nn.KLDivLoss(reduction='mean')(fea_0, fea_1)
     
 
 def student_train(args, dataloader, criterion, retcher_list, student, device):

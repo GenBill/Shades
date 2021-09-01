@@ -4,19 +4,26 @@ import torch.optim as optim
 import random
 import math
 import os
+import argparse
+
+from count_lipz import count_lipz
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--smooth_flag', type=bool, default=False, help="smooth_flag")
+opt = parser.parse_args()
+
 trainset_size = 10000
-testset_size = 1000
+testset_size = 10000
 
 length_fea = 100
 batch_size = 100
-num_epoch = 100
+num_epoch = 10
 
 bias = 0.2
-smooth_flag = False #True
+smooth_flag = opt.smooth_flag
 
 def Makerand_fun(set_size, length_fea, bias=1):
     a = torch.randn(set_size, length_fea) + bias
@@ -55,11 +62,11 @@ acc_rates = []
 
 net = nn.Sequential(
     nn.Linear(length_fea, length_fea),
-    nn.LeakyReLU(),
+    nn.Softplus(),
     nn.Linear(length_fea, length_fea),
-    nn.LeakyReLU(),
+    nn.Softplus(),
     nn.Linear(length_fea, length_fea),
-    nn.LeakyReLU(),
+    nn.Softplus(),
     nn.Linear(length_fea, 2),
 ).to(device)
 
@@ -144,3 +151,5 @@ with torch.no_grad():
 
 print('Test Acc: {}'.format(test_acc_rate))
 
+Lipz = count_lipz(net, test_set, device, rand_times=16, eps=1e-4)
+print(Lipz)

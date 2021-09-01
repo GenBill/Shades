@@ -54,3 +54,7 @@ student_ft = nn.Sequential(*(list(student.children())[:-1]))
 student_fc = nn.Sequential(*(list(student.children())[-1:]))
 
 print(student_ft, student_fc)
+
+z1 = torch.ones(3,3)
+z0 = z1[0:1, :]
+print(z0.shape)

@@ -1,2 +1,3 @@
-# Rotavap
-Rotary Evaporator : Introspective Distillation for Robustness
+# Shades
+Introspective Distillation for Robustness
+Continuous Labels enhance Locally Lipschitz Continuous

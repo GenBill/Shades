@@ -6,7 +6,7 @@ import math
 import os
 import argparse
 
-from count_lipz import count_lipz
+from lipz.count_lipz import count_lipz
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

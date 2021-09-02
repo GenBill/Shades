@@ -58,3 +58,6 @@ print(student_ft, student_fc)
 z1 = torch.ones(3,3)
 z0 = z1[0:1, :]
 print(z0.shape)
+
+rand_vector = torch.rand((3, 1), device='cpu')
+print(rand_vector)

@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.optim import lr_scheduler
 
 def identity_mapping(device):
     return nn.Sequential().to(device)
@@ -16,6 +17,11 @@ def rota_creater(in_features, device):
     Answer : Rotation Matrix cannot solve Chirality -> Linear
     '''
     return nn.Linear(in_features, in_features, bias=True).to(device)
+    Se_rota = nn.Sequential(
+        nn.LogSigmoid(),
+        nn.Linear(in_features, in_features, bias=True),
+    )
+    return Se_rota.to(device)
 
 
 def teacher_list_init(model_list, device):
@@ -51,7 +57,11 @@ def rota_train(args, dataloader, model_list, device, quick_flag=False):
     rota_list = rota_list_init(teacher_list, in_features, device, quick_flag)
     
     rota_param = nn.Sequential(*rota_list)
-    optimizer_rota = optim.SGD(rota_param.parameters(), lr=args.lr, momentum=args.momentum, nesterov=True, weight_decay=1e-4)
+    optimizer_rota = optim.SGD(
+        rota_param.parameters(), nesterov=False, # True
+        lr=args.lr, momentum=args.momentum, weight_decay=args.weight, 
+    )
+    exp_lr_scheduler = lr_scheduler.MultiStepLR(optimizer_rota, milestones=args.milestones, gamma=args.gamma)
 
     # init eval() & train()
     for i in range(model_num):
@@ -89,11 +99,12 @@ def rota_train(args, dataloader, model_list, device, quick_flag=False):
             loss = torch.mean(torch.std(outputs, dim=2))
             loss.backward()
             optimizer_rota.step()
-            # scheduler.step()
+            exp_lr_scheduler.step()
+
             running_loss += loss.item() * batchSize
 
         epoch_loss = running_loss / n_samples
-        print('Epoch {}, Loss : {:.8f}'.format(epoch, epoch_loss))
+        print('Epoch {}, Loss : {:.6f}'.format(epoch, epoch_loss))
 
     return teacher_list, rota_list
 

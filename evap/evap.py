@@ -1,13 +1,18 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
 import torch.optim as optim
-import torch.functional as F
+from torch.optim import lr_scheduler
+
 
 from rota import rota_train
 
-def feature_dist(fea_0, fea_1, T = 2):
-    # return nn.KLDivLoss(reduction='mean')(fea_0, fea_1)
-    return nn.MSELoss()(fea_0, fea_1)
+def feature_dist(fea_0, fea_1):
+    return F.kl_div(fea_0.softmax(dim=-1).log(), fea_1.softmax(dim=-1), reduction='sum')
+    # return 1 - torch.mean(torch.cosine_similarity(fea_0, fea_1, dim=0))
+    # return nn.KLDivLoss(reduction='batchmean')(nn.Sigmoid()(fea_0), nn.Sigmoid()(fea_1))
+    # return nn.MSELoss()(fea_0, fea_1)
     
 
 def student_train(args, dataloader, criterion, retcher_list, student, device):
@@ -17,7 +22,16 @@ def student_train(args, dataloader, criterion, retcher_list, student, device):
     '''
     model_num = len(retcher_list)
     student_ft = nn.Sequential(*(list(student.children())[:-1]))
-    optimizer_stu = optim.SGD(student.parameters(), lr=args.lr, momentum=args.momentum, nesterov=True, weight_decay=1e-4)
+    optimizer_stu = optim.SGD(
+        student.parameters(), nesterov=True, 
+        lr=args.lr, momentum=args.momentum, weight_decay=args.weight
+    )
+    exp_lr_scheduler = lr_scheduler.MultiStepLR(optimizer_stu, milestones=args.milestones, gamma=args.gamma)
+
+    # optimizer_stu = optim.SGD([
+    #     {'params': student_ft.parameters(), 'lr': args.lr, 'weight_decay': args.weight, 'momentum': args.momentum, 'nesterov': True},
+    #     {'params': student.fc.parameters(), 'lr': args.lr, 'weight_decay': args.weight, 'momentum': args.momentum, 'nesterov': True},
+    # ])
     
     for this_model in retcher_list:
         this_model.eval()
@@ -43,6 +57,7 @@ def student_train(args, dataloader, criterion, retcher_list, student, device):
             loss = criterion(outputs_stu, labels)
             loss_plain = loss.item()
 
+            loss *= 1-args.alpha
             pred_top_1 = torch.topk(outputs_stu, k=1, dim=1)[1]
             this_acc = pred_top_1.eq(labels.view_as(pred_top_1)).int().sum().item()
             
@@ -56,7 +71,8 @@ def student_train(args, dataloader, criterion, retcher_list, student, device):
             
             loss.backward()
             optimizer_stu.step()
-            # scheduler.step()
+            exp_lr_scheduler.step()
+            
             running_loss += loss.item() * batchSize
             running_loss_plain += loss_plain * batchSize
             running_acc += this_acc
@@ -65,8 +81,8 @@ def student_train(args, dataloader, criterion, retcher_list, student, device):
         epoch_loss_plain = running_loss_plain / n_samples
         epoch_acc = running_acc / n_samples
 
-        print('Epoch {}\nLoss : {:.8f}, Plain Loss : {:.8f}'.format(epoch, epoch_loss, epoch_loss_plain))
-        print('Acc : {:.8f}'.format(epoch_acc))
+        print('Epoch {}\nLoss : {:.6f}, Plain Loss : {:.6f}'.format(epoch, epoch_loss, epoch_loss_plain))
+        print('Acc : {:.6f}'.format(epoch_acc))
 
     return student
 

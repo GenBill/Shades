@@ -6,7 +6,7 @@ import math
 import os
 import argparse
 
-from lipz.count_lipz import count_lipz
+from count_lipz import count_lipz
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -20,9 +20,9 @@ testset_size = 10000
 
 length_fea = 100
 batch_size = 100
-num_epoch = 10
+num_epoch = 20
 
-bias = 0.2
+bias = 0.4
 smooth_flag = opt.smooth_flag
 
 def Makerand_fun(set_size, length_fea, bias=1):
@@ -151,5 +151,5 @@ with torch.no_grad():
 
 print('Test Acc: {}'.format(test_acc_rate))
 
-Lipz = count_lipz(net, test_set, device, rand_times=16, eps=1e-4)
+Lipz = count_lipz(net, test_set, device, rand_times=16, eps=1e-1)
 print(Lipz)

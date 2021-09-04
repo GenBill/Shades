@@ -2,7 +2,7 @@ import torch
 import math
 from tqdm import tqdm
 
-def count_lipz(net, dataset, device, rand_times=64, eps=1e-6):
+def count_lipz(net, dataset, device, rand_times=64, eps=1e-2):
     sample_size = dataset.shape[0]
     length_fea = dataset.shape[1]
     net.eval()

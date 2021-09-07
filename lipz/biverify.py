@@ -22,7 +22,7 @@ length_fea = 100
 batch_size = 100
 num_epoch = 20
 
-bias = 0.4
+bias = 0.2
 smooth_flag = opt.smooth_flag
 
 def Makerand_fun(set_size, length_fea, bias=1):
@@ -71,10 +71,11 @@ net = nn.Sequential(
 ).to(device)
 
 # criterion = nn.BCEWithLogitsLoss()
-# criterion = nn.MSELoss()
-def criterion(pred, soft_targets):
-    logsoftmax = nn.LogSoftmax(dim=1)
-    return torch.mean(torch.sum(-soft_targets * logsoftmax(pred), dim=1))
+criterion = nn.MSELoss()
+
+# def criterion(pred, soft_targets):
+#     logsoftmax = nn.LogSoftmax(dim=1)
+#     return torch.mean(torch.sum(-soft_targets * logsoftmax(pred), dim=1))
 
 optimizer = optim.SGD(net.parameters(), lr=1e-2, momentum=0.8, weight_decay=1e-6)
 
